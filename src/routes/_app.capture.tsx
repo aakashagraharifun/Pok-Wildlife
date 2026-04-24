@@ -13,13 +13,108 @@ import { identifySpecies } from "@/services/inaturalist";
 import { checkProximity } from "@/services/overpass";
 import { findSpecies } from "@/data/species";
 import { calculateScore } from "@/utils/scoring";
-import {
-  addSightingServer,
-  checkAlreadyCapturedServer,
-} from "@/services/sightings.server";
 import { LoadingOverlay } from "@/components/wildlife/LoadingOverlay";
 import { formatCoord } from "@/utils/formatters";
-import type { Coords } from "@/types";
+import type { Coords, Sighting } from "@/types";
+import { createServerFn } from "@tanstack/react-start";
+import { supabase } from "@/lib/supabase";
+
+// SERVER FUNCTIONS (Defined inside route for automatic splitting)
+const checkAlreadyCapturedServer = createServerFn({ method: "POST" })
+  .validator((data: { userId: string; speciesName: string }) => data)
+  .handler(async ({ data: { userId, speciesName } }) => {
+    const { data, error } = await supabase
+      .from("sightings")
+      .select("created_at")
+      .eq("user_id", userId)
+      .eq("species_name", speciesName);
+
+    if (error || !data) return { hasCapturedBefore: false, hasCapturedToday: false };
+
+    const hasCapturedBefore = data.length > 0;
+    const today = new Date().toISOString().split("T")[0];
+    const hasCapturedToday = data.some((s: any) => s.created_at.startsWith(today));
+
+    return { hasCapturedBefore, hasCapturedToday };
+  });
+
+const addSightingServer = createServerFn({ method: "POST" })
+  .validator((data: Omit<Sighting, "id" | "createdAt">) => data)
+  .handler(async ({ data: input }) => {
+    let finalImageUrl = input.imageUrl;
+
+    if (input.imageUrl.startsWith("data:")) {
+      try {
+        // Strict dynamic imports to prevent AWS SDK from touching the client build
+        const { S3Client, PutObjectCommand } = await import("@aws-sdk/client-s3");
+        const { getSignedUrl } = await import("@aws-sdk/s3-request-presigner");
+
+        const r2 = new S3Client({
+          region: "auto",
+          endpoint: process.env.R2_ENDPOINT,
+          credentials: {
+            accessKeyId: process.env.R2_ACCESS_KEY_ID || "",
+            secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || "",
+          },
+        });
+
+        const key = `sightings/${Date.now()}-${input.speciesName.replace(/\s+/g, "_")}.jpg`;
+        const command = new PutObjectCommand({
+          Bucket: process.env.R2_BUCKET_NAME,
+          Key: key,
+          ContentType: "image/jpeg",
+        });
+
+        const uploadUrl = await getSignedUrl(r2, command, { expiresIn: 3600 });
+        const publicUrlBase = process.env.R2_PUBLIC_URL_BASE || `${process.env.R2_ENDPOINT}/${process.env.R2_BUCKET_NAME}`;
+        const publicUrl = `${publicUrlBase}/${key}`;
+
+        const blob = await (await fetch(input.imageUrl)).blob();
+        const uploadRes = await fetch(uploadUrl, {
+          method: "PUT",
+          body: blob,
+          headers: { "Content-Type": "image/jpeg" },
+        });
+
+        if (!uploadRes.ok) throw new Error("R2 upload failed");
+        finalImageUrl = publicUrl;
+      } catch (err) {
+        console.error("Storage upload failed", err);
+      }
+    }
+
+    const { data, error } = await supabase
+      .from("sightings")
+      .insert({
+        user_id: input.userId,
+        image_url: finalImageUrl,
+        species_name: input.speciesName,
+        emoji: input.emoji,
+        confidence: input.confidence,
+        lat: input.lat,
+        lng: input.lng,
+        score: input.score,
+        is_suspicious: input.isSuspicious,
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    await supabase.rpc("increment_user_score", {
+      user_id: input.userId,
+      score_delta: input.score,
+    });
+
+    return {
+      ...data,
+      id: data.id,
+      userId: data.user_id,
+      imageUrl: data.image_url,
+      speciesName: data.species_name,
+      createdAt: data.created_at,
+    };
+  });
 
 export const Route = createFileRoute("/_app/capture")({
   head: () => ({ meta: [{ title: "Capture — Pok Wildlife" }] }),
@@ -44,7 +139,6 @@ function CaptureScreen() {
   useEffect(() => {
     let cancelled = false;
     async function start() {
-      // Check if secure context
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         setCameraError("Secure context (HTTPS) required for direct camera access.");
         return;
@@ -81,7 +175,6 @@ function CaptureScreen() {
     };
   }, []);
 
-  // Get GPS
   useEffect(() => {
     getCurrentCoords().then(setCoords);
   }, []);
@@ -121,7 +214,6 @@ function CaptureScreen() {
     try {
       const where = coords ?? (await getCurrentCoords());
 
-      // Haptic
       if ("vibrate" in navigator) navigator.vibrate?.(40);
 
       setBusyMsg("Identifying species…");
@@ -170,13 +262,11 @@ function CaptureScreen() {
         }
       });
 
-      // Stop camera before navigating
       streamRef.current?.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
 
       if ("vibrate" in navigator) navigator.vibrate?.([20, 50, 80]);
 
-      // Invalidate caches
       queryClient.invalidateQueries({ queryKey: ["sightings"] });
       queryClient.invalidateQueries({ queryKey: ["leaderboard"] });
 
@@ -192,7 +282,6 @@ function CaptureScreen() {
 
   return (
     <div className="fixed inset-0 z-20 flex flex-col bg-foreground text-primary-foreground">
-      {/* Camera preview */}
       <div className="relative flex-1 overflow-hidden bg-foreground">
         {cameraReady ? (
           <video
@@ -212,11 +301,9 @@ function CaptureScreen() {
         )}
         <canvas ref={canvasRef} className="hidden" />
 
-        {/* Top bar */}
         <div className="absolute inset-x-0 top-0 flex items-center justify-between p-4 safe-top">
           <Link
             to="/home"
-            aria-label="Back"
             className="flex h-10 w-10 items-center justify-center rounded-full bg-foreground/40 backdrop-blur"
           >
             <ArrowLeft className="h-5 w-5" />
@@ -231,13 +318,11 @@ function CaptureScreen() {
           )}
         </div>
 
-        {/* Crosshair */}
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
           <div className="h-44 w-44 rounded-3xl border-2 border-primary-foreground/40" />
         </div>
       </div>
 
-      {/* Shutter */}
       <div className="bg-foreground/95 p-6 safe-bottom">
         <div className="mb-3 text-center text-xs text-primary-foreground/70">
           {cameraReady ? "Frame the wildlife and tap to capture" : "Tap to simulate capture"}
@@ -246,7 +331,6 @@ function CaptureScreen() {
           <button
             onClick={handleCapture}
             disabled={busy}
-            aria-label="Capture"
             className="relative flex h-20 w-20 items-center justify-center rounded-full border-4 border-primary-foreground bg-transparent transition-transform active:scale-95 disabled:opacity-60 animate-pulse-ring"
           >
             <span className="h-14 w-14 rounded-full bg-primary-foreground" />
