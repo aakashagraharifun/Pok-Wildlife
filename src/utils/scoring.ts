@@ -8,13 +8,14 @@ export interface ScoreInput {
   rarityScore: number;
   isDuplicate: boolean;
   isNearZoo: boolean;
+  isNearPark: boolean;
 }
 
 /**
  * Pure scoring function. No side effects.
  */
 export function calculateScore(input: ScoreInput): ScoreBreakdown {
-  const { confidence, isNewSpecies, rarityScore, isDuplicate, isNearZoo } = input;
+  const { confidence, isNewSpecies, rarityScore, isDuplicate, isNearZoo, isNearPark } = input;
 
   let base = Math.round(Math.max(0, Math.min(1, confidence)) * 100);
   const breakdown: ScoreBreakdown = {
@@ -39,6 +40,11 @@ export function calculateScore(input: ScoreInput): ScoreBreakdown {
   if (rarityScore >= 80) {
     breakdown.rareBonus = 100;
     total += 100;
+  }
+
+  if (isNearPark) {
+    breakdown.parkBonus = 25;
+    total += 25;
   }
 
   if (isNearZoo) {

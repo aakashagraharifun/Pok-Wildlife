@@ -37,7 +37,8 @@ export function SightingCard({ sighting, variant = "horizontal", byName }: Props
 
   return (
     <Link
-      to="/explorer"
+      to="/species/$name"
+      params={{ name: sighting.speciesName }}
       className="block w-44 shrink-0 rounded-2xl bg-card p-3 shadow-card transition-transform active:scale-95"
     >
       <SpeciesThumb emoji={sighting.emoji} suspicious={sighting.isSuspicious} large />

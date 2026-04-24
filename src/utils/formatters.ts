@@ -1,4 +1,5 @@
-export function formatRelativeTime(iso: string): string {
+export function formatRelativeTime(iso?: string): string {
+  if (!iso) return "";
   const then = new Date(iso).getTime();
   const now = Date.now();
   const diff = Math.max(0, now - then);
@@ -13,17 +14,20 @@ export function formatRelativeTime(iso: string): string {
   return new Date(iso).toLocaleDateString();
 }
 
-export function formatScore(n: number): string {
+export function formatScore(n?: number): string {
+  if (n === undefined || n === null) return "0";
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
   if (n >= 10_000) return `${(n / 1000).toFixed(1)}k`;
   return n.toLocaleString();
 }
 
-export function formatCoord(n: number): string {
+export function formatCoord(n?: number): string {
+  if (n === undefined || n === null) return "0.0000";
   return n.toFixed(4);
 }
 
-export function getInitials(name: string): string {
+export function getInitials(name?: string): string {
+  if (!name) return "??";
   return name
     .trim()
     .split(/\s+/)
@@ -35,7 +39,7 @@ export function getInitials(name: string): string {
 }
 
 /** Deterministic color from a string for avatars */
-export function colorFromString(s: string): string {
+export function colorFromString(s: string = ""): string {
   let hash = 0;
   for (let i = 0; i < s.length; i++) hash = (hash * 31 + s.charCodeAt(i)) | 0;
   const hues = [142, 90, 50, 25, 200, 170, 100, 60, 35];
@@ -43,18 +47,28 @@ export function colorFromString(s: string): string {
   return `oklch(0.65 0.13 ${h})`;
 }
 
-export function formatMemberSince(iso: string): string {
-  return new Date(iso).toLocaleDateString(undefined, {
-    month: "long",
-    year: "numeric",
-  });
+export function formatMemberSince(iso?: string): string {
+  if (!iso) return "Unknown";
+  try {
+    return new Date(iso).toLocaleDateString(undefined, {
+      month: "long",
+      year: "numeric",
+    });
+  } catch {
+    return "Unknown";
+  }
 }
 
-export function formatDateTime(iso: string): string {
-  return new Date(iso).toLocaleString(undefined, {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
+export function formatDateTime(iso?: string): string {
+  if (!iso) return "";
+  try {
+    return new Date(iso).toLocaleString(undefined, {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  } catch {
+    return "";
+  }
 }

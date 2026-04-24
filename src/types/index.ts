@@ -21,6 +21,7 @@ export interface Sighting {
   score: number;
   isSuspicious: boolean;
   createdAt: string;
+  userName?: string;
 }
 
 export interface SpeciesCacheEntry {
@@ -35,6 +36,7 @@ export interface ScoreBreakdown {
   duplicateMultiplier?: number;
   newSpeciesBonus?: number;
   rareBonus?: number;
+  parkBonus?: number;
   zooMultiplier?: number;
   total: number;
   isSuspicious: boolean;

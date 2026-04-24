@@ -13,8 +13,8 @@ import { Field } from "./login";
 
 export const Route = createFileRoute("/register")({
   head: () => ({ meta: [{ title: "Create account — Pok Wildlife" }] }),
-  beforeLoad: () => {
-    if (typeof window !== "undefined" && getCurrentUser()) {
+  beforeLoad: async () => {
+    if (typeof window !== "undefined" && (await getCurrentUser())) {
       throw redirect({ to: "/home" });
     }
   },
@@ -37,9 +37,16 @@ function RegisterScreen() {
     }
     setBusy(true);
     try {
-      await register(name, email, password);
-      toast.success("Welcome to Pok Wildlife!");
-      navigate({ to: "/home", replace: true });
+      const { session } = await register(name, email, password);
+      if (!session) {
+        toast.success("Account created!", {
+          description: "Please check your email to confirm your account.",
+        });
+        navigate({ to: "/login" });
+      } else {
+        toast.success("Welcome to Pok Wildlife!");
+        navigate({ to: "/home", replace: true });
+      }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Sign-up failed");
     } finally {

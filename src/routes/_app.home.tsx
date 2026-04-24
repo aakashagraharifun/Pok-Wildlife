@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Sparkles, Camera, ArrowRight } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
-import { listAllSightings, listUserSightings } from "@/services/sightings";
+import { listAllSightings, listUserSightings, getLeaderboard } from "@/services/sightings";
 import { UserAvatar } from "@/components/wildlife/UserAvatar";
 import { SightingCard } from "@/components/wildlife/SightingCard";
 import { formatScore } from "@/utils/formatters";
@@ -92,6 +92,67 @@ function HomeScreen() {
         items={recentGlobal}
         showAuthor
       />
+
+      {/* Tips & Tricks */}
+      <section className="mt-8 px-5">
+        <h2 className="mb-3 text-base font-bold text-foreground">Wildlife Tips</h2>
+        <div className="grid grid-cols-2 gap-3">
+          <TipCard
+            emoji="📸"
+            title="Get Closer"
+            desc="Better zoom means higher confidence."
+          />
+          <TipCard
+            emoji="🌿"
+            title="Find Parks"
+            desc="Earn +25 bonus points in public parks."
+          />
+        </div>
+      </section>
+
+      {/* Leaderboard summary */}
+      <section className="mt-8 px-5">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-base font-bold text-foreground">Top Explorers</h2>
+          <Link to="/leaderboard" className="text-xs font-bold text-primary flex items-center gap-1">
+            View all <ArrowRight className="h-3 w-3" />
+          </Link>
+        </div>
+        <MiniLeaderboard />
+      </section>
+    </div>
+  );
+}
+
+function MiniLeaderboard() {
+  const { data: ranks = [], isLoading } = useQuery({
+    queryKey: ["leaderboard", "top-3"],
+    queryFn: () => getLeaderboard(),
+  });
+
+  if (isLoading) return <div className="skeleton h-32 rounded-2xl w-full" />;
+
+  return (
+    <div className="rounded-2xl bg-card p-3 shadow-elegant divide-y divide-border/50">
+      {ranks.slice(0, 3).map((u, i) => (
+        <div key={u.id} className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
+          <span className="w-4 text-xs font-black text-muted-foreground/60">{i + 1}</span>
+          <UserAvatar name={u.name} size={32} />
+          <span className="flex-1 text-sm font-semibold text-foreground truncate">{u.name}</span>
+          <span className="text-sm font-bold text-primary">{formatScore(u.totalScore)}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+
+function TipCard({ emoji, title, desc }: { emoji: string; title: string; desc: string }) {
+  return (
+    <div className="rounded-2xl bg-card p-4 shadow-card">
+      <div className="text-2xl">{emoji}</div>
+      <p className="mt-2 text-sm font-bold text-foreground leading-tight">{title}</p>
+      <p className="mt-1 text-[10px] text-muted-foreground leading-snug">{desc}</p>
     </div>
   );
 }
@@ -128,7 +189,7 @@ function Section({
             <SightingCard
               key={s.id}
               sighting={s}
-              byName={showAuthor ? getUserById(s.userId)?.name : undefined}
+              byName={showAuthor ? s.userName : undefined}
             />
           ))}
         </div>

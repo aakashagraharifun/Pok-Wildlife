@@ -14,15 +14,15 @@ import {
   logout as svcLogout,
   register as svcRegister,
 } from "@/services/auth";
-import { ensureSeeded } from "@/services/store";
+import { supabase } from "@/lib/supabase";
 
 interface AuthContextValue {
   user: User | null;
   ready: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string) => Promise<void>;
+  register: (name: string, email: string, password: string) => Promise<{ user: User; session: any }>;
   logout: () => Promise<void>;
-  refresh: () => void;
+  refresh: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -31,17 +31,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [ready, setReady] = useState(false);
 
-  const refresh = useCallback(() => {
-    setUser(getCurrentUser());
+  const refresh = useCallback(async () => {
+    const u = await getCurrentUser();
+    setUser(u);
   }, []);
 
   useEffect(() => {
-    ensureSeeded();
-    refresh();
-    setReady(true);
-    const onStorage = () => refresh();
-    window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
+    refresh().finally(() => setReady(true));
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (session) {
+        refresh();
+      } else {
+        setUser(null);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, [refresh]);
 
   const login = useCallback(async (email: string, password: string) => {
@@ -50,8 +58,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const register = useCallback(async (name: string, email: string, password: string) => {
-    const u = await svcRegister(name, email, password);
-    setUser(u);
+    const result = await svcRegister(name, email, password);
+    if (result.session) {
+      setUser(result.user);
+    }
+    return result;
   }, []);
 
   const logout = useCallback(async () => {

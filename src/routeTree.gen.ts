@@ -19,6 +19,7 @@ import { Route as AppLeaderboardRouteImport } from './routes/_app.leaderboard'
 import { Route as AppHomeRouteImport } from './routes/_app.home'
 import { Route as AppExplorerRouteImport } from './routes/_app.explorer'
 import { Route as AppCaptureRouteImport } from './routes/_app.capture'
+import { Route as AppSpeciesNameRouteImport } from './routes/_app.species.$name'
 
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
@@ -69,6 +70,11 @@ const AppCaptureRoute = AppCaptureRouteImport.update({
   path: '/capture',
   getParentRoute: () => AppRoute,
 } as any)
+const AppSpeciesNameRoute = AppSpeciesNameRouteImport.update({
+  id: '/species/$name',
+  path: '/species/$name',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -80,6 +86,7 @@ export interface FileRoutesByFullPath {
   '/leaderboard': typeof AppLeaderboardRoute
   '/profile': typeof AppProfileRoute
   '/result': typeof AppResultRoute
+  '/species/$name': typeof AppSpeciesNameRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -91,6 +98,7 @@ export interface FileRoutesByTo {
   '/leaderboard': typeof AppLeaderboardRoute
   '/profile': typeof AppProfileRoute
   '/result': typeof AppResultRoute
+  '/species/$name': typeof AppSpeciesNameRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -104,6 +112,7 @@ export interface FileRoutesById {
   '/_app/leaderboard': typeof AppLeaderboardRoute
   '/_app/profile': typeof AppProfileRoute
   '/_app/result': typeof AppResultRoute
+  '/_app/species/$name': typeof AppSpeciesNameRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -117,6 +126,7 @@ export interface FileRouteTypes {
     | '/leaderboard'
     | '/profile'
     | '/result'
+    | '/species/$name'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -128,6 +138,7 @@ export interface FileRouteTypes {
     | '/leaderboard'
     | '/profile'
     | '/result'
+    | '/species/$name'
   id:
     | '__root__'
     | '/'
@@ -140,6 +151,7 @@ export interface FileRouteTypes {
     | '/_app/leaderboard'
     | '/_app/profile'
     | '/_app/result'
+    | '/_app/species/$name'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -221,6 +233,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppCaptureRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/species/$name': {
+      id: '/_app/species/$name'
+      path: '/species/$name'
+      fullPath: '/species/$name'
+      preLoaderRoute: typeof AppSpeciesNameRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
@@ -231,6 +250,7 @@ interface AppRouteChildren {
   AppLeaderboardRoute: typeof AppLeaderboardRoute
   AppProfileRoute: typeof AppProfileRoute
   AppResultRoute: typeof AppResultRoute
+  AppSpeciesNameRoute: typeof AppSpeciesNameRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -240,6 +260,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppLeaderboardRoute: AppLeaderboardRoute,
   AppProfileRoute: AppProfileRoute,
   AppResultRoute: AppResultRoute,
+  AppSpeciesNameRoute: AppSpeciesNameRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)

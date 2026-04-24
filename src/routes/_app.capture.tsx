@@ -10,7 +10,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useQueryClient } from "@tanstack/react-query";
 import { getCurrentCoords } from "@/services/geolocation";
 import { identifySpecies } from "@/services/inaturalist";
-import { isNearZoo } from "@/services/overpass";
+import { checkProximity } from "@/services/overpass";
 import { findSpecies } from "@/data/species";
 import { calculateScore } from "@/utils/scoring";
 import {
@@ -121,8 +121,7 @@ function CaptureScreen() {
       }
 
       setBusyMsg("Checking location…");
-      // TODO: replace with real Overpass API
-      const nearZoo = await isNearZoo(where);
+      const { isNearZoo: nearZoo, isNearPark: nearPark } = await checkProximity(where);
 
       const cached = findSpecies(id.speciesName);
       const rarityScore = cached?.rarityScore ?? 30;
@@ -135,6 +134,7 @@ function CaptureScreen() {
         rarityScore,
         isDuplicate: isDup,
         isNearZoo: nearZoo,
+        isNearPark: nearPark,
       });
 
       const sighting = await addSighting({

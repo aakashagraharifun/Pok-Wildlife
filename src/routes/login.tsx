@@ -12,8 +12,8 @@ import { getCurrentUser } from "@/services/auth";
 
 export const Route = createFileRoute("/login")({
   head: () => ({ meta: [{ title: "Sign in — Pok Wildlife" }] }),
-  beforeLoad: () => {
-    if (typeof window !== "undefined" && getCurrentUser()) {
+  beforeLoad: async () => {
+    if (typeof window !== "undefined" && (await getCurrentUser())) {
       throw redirect({ to: "/home" });
     }
   },

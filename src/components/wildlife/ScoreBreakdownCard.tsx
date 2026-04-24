@@ -18,6 +18,9 @@ export function ScoreBreakdownCard({ breakdown }: Props) {
   if (breakdown.rareBonus) {
     rows.push({ label: "Rare species bonus", value: `+${breakdown.rareBonus}` });
   }
+  if (breakdown.parkBonus) {
+    rows.push({ label: "Park discovery bonus", value: `+${breakdown.parkBonus}` });
+  }
   if (breakdown.zooMultiplier) {
     rows.push({
       label: "Near zoo penalty",
@@ -25,6 +28,7 @@ export function ScoreBreakdownCard({ breakdown }: Props) {
       tone: "warn",
     });
   }
+
 
   return (
     <div className="rounded-2xl bg-card p-4 shadow-card">

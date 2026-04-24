@@ -61,7 +61,16 @@ function ProfileScreen() {
         </div>
       </div>
 
-      <section className="mt-6 px-4">
+      <section className="mt-8 px-4">
+        <h2 className="mb-3 text-base font-bold text-foreground">Recent Achievements</h2>
+        <div className="flex gap-3 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <Achievement badge="🦋" label="Butterfly Hunter" date="2 days ago" />
+          <Achievement badge="🌲" label="Park Ranger" date="Yesterday" />
+          <Achievement badge="🌟" label="First Capture" date="3 days ago" />
+        </div>
+      </section>
+
+      <section className="mt-8 px-4">
         <h2 className="mb-3 text-base font-bold text-foreground">Your collection</h2>
         {isLoading ? (
           <div className="grid grid-cols-3 gap-2">
@@ -108,6 +117,18 @@ function ProfileScreen() {
           Sign out
         </button>
       </div>
+    </div>
+  );
+}
+
+function Achievement({ badge, label, date }: { badge: string; label: string; date: string }) {
+  return (
+    <div className="flex w-32 shrink-0 flex-col items-center rounded-2xl bg-card p-3 shadow-card text-center">
+      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-secondary text-2xl">
+        {badge}
+      </div>
+      <p className="mt-2 text-xs font-bold text-foreground leading-tight">{label}</p>
+      <p className="mt-0.5 text-[10px] text-muted-foreground">{date}</p>
     </div>
   );
 }

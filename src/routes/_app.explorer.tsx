@@ -1,5 +1,5 @@
 import { lazy, Suspense, useMemo, useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Filter, AlertTriangle, MapPin } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
@@ -117,9 +117,13 @@ function SightingDetail({ sighting }: { sighting: Sighting }) {
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
-            <h3 className="truncate text-lg font-bold text-foreground">
+            <Link
+              to="/species/$name"
+              params={{ name: sighting.speciesName }}
+              className="truncate text-lg font-bold text-foreground hover:text-primary transition-colors"
+            >
               {sighting.speciesName}
-            </h3>
+            </Link>
             {sighting.isSuspicious && (
               <AlertTriangle className="h-4 w-4 text-warning" />
             )}
