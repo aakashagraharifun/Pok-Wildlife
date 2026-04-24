@@ -14,9 +14,9 @@ import { checkProximity } from "@/services/overpass";
 import { findSpecies } from "@/data/species";
 import { calculateScore } from "@/utils/scoring";
 import {
-  addSighting,
-  checkAlreadyCaptured,
-} from "@/services/sightings";
+  addSightingServer,
+  checkAlreadyCapturedServer,
+} from "@/services/sightings.server";
 import { LoadingOverlay } from "@/components/wildlife/LoadingOverlay";
 import { formatCoord } from "@/utils/formatters";
 import type { Coords } from "@/types";
@@ -136,7 +136,7 @@ function CaptureScreen() {
       }
 
       setBusyMsg("Checking history...");
-      const { hasCapturedBefore, hasCapturedToday } = await checkAlreadyCaptured(user.id, id.speciesName);
+      const { hasCapturedBefore, hasCapturedToday } = await checkAlreadyCapturedServer({ data: { userId: user.id, speciesName: id.speciesName } });
 
       setBusyMsg("Checking location…");
       const { isNearZoo: nearZoo, isNearPark: nearPark } = await checkProximity(where);
@@ -156,16 +156,18 @@ function CaptureScreen() {
         isNearPark: nearPark,
       });
 
-      const sighting = await addSighting({
-        userId: user.id,
-        imageUrl,
-        speciesName: id.speciesName,
-        emoji: id.emoji,
-        confidence: id.confidence,
-        lat: where.lat,
-        lng: where.lng,
-        score: breakdown.total,
-        isSuspicious: breakdown.isSuspicious,
+      const sighting = await addSightingServer({
+        data: {
+          userId: user.id,
+          imageUrl,
+          speciesName: id.speciesName,
+          emoji: id.emoji,
+          confidence: id.confidence,
+          lat: where.lat,
+          lng: where.lng,
+          score: breakdown.total,
+          isSuspicious: breakdown.isSuspicious,
+        }
       });
 
       // Stop camera before navigating
