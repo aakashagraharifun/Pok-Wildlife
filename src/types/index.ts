@@ -2,10 +2,14 @@ export interface User {
   id: string;
   name: string;
   email: string;
+  avatarUrl?: string;
   /** mock only — never store real password hashes client-side */
   passwordHash: string;
   totalScore: number;
   createdAt: string;
+  bio?: string;
+  birthday?: string;
+  address?: string;
 }
 
 export interface Sighting {

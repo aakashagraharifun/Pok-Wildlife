@@ -25,8 +25,8 @@ export function calculateScore(input: ScoreInput): ScoreBreakdown {
   };
 
   if (isDuplicate) {
-    base = Math.round(base * 0.5);
-    breakdown.duplicateMultiplier = 0.5;
+    base = Math.round(base * 0.3);
+    breakdown.duplicateMultiplier = 0.3;
     breakdown.base = base;
   }
 

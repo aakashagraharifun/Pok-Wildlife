@@ -116,7 +116,13 @@ export async function updateCurrentUserScore(delta: number): Promise<void> {
 /**
  * Update user profile details.
  */
-export async function updateProfile(updates: { name?: string; avatarUrl?: string }): Promise<User> {
+export async function updateProfile(updates: { 
+  name?: string; 
+  avatarUrl?: string;
+  bio?: string;
+  birthday?: string;
+  address?: string;
+}): Promise<User> {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session?.user) throw new Error("Not authenticated");
 
@@ -125,6 +131,9 @@ export async function updateProfile(updates: { name?: string; avatarUrl?: string
     .update({
       name: updates.name,
       avatar_url: updates.avatarUrl,
+      bio: updates.bio,
+      birthday: updates.birthday,
+      address: updates.address,
       updated_at: new Date().toISOString(),
     })
     .eq("id", session.user.id)
@@ -143,6 +152,11 @@ function mapProfile(p: any): User {
     passwordHash: "managed",
     totalScore: p.total_score || 0,
     createdAt: p.created_at,
+    avatarUrl: p.avatar_url,
+    bio: p.bio,
+    birthday: p.birthday,
+    address: p.address,
   };
 }
+
 

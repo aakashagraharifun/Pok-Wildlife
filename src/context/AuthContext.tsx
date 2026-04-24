@@ -13,6 +13,7 @@ import {
   login as svcLogin,
   logout as svcLogout,
   register as svcRegister,
+  updateProfile as svcUpdateProfile,
 } from "@/services/auth";
 import { supabase } from "@/lib/supabase";
 
@@ -23,6 +24,13 @@ interface AuthContextValue {
   register: (name: string, email: string, password: string) => Promise<{ user: User; session: any }>;
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
+  updateProfile: (updates: { 
+    name?: string; 
+    avatarUrl?: string;
+    bio?: string;
+    birthday?: string;
+    address?: string;
+  }) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -70,9 +78,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }, []);
 
+  const updateProfile = useCallback(async (updates: { name?: string; avatarUrl?: string }) => {
+    const updated = await svcUpdateProfile(updates);
+    setUser(updated);
+  }, []);
+
   const value = useMemo<AuthContextValue>(
-    () => ({ user, ready, login, register, logout, refresh }),
-    [user, ready, login, register, logout, refresh],
+    () => ({ user, ready, login, register, logout, refresh, updateProfile }),
+    [user, ready, login, register, logout, refresh, updateProfile],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

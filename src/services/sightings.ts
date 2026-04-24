@@ -80,14 +80,30 @@ export async function addSighting(input: Omit<Sighting, "id" | "createdAt">): Pr
   return mapSighting(data);
 }
 
-export function userHasCapturedSpecies(userId: string, speciesName: string): boolean {
-  // This should probably be an async function if using real Supabase, 
-  // but for now we might rely on client-side cache or just accept a minor race condition.
-  return false; 
+export async function checkAlreadyCaptured(userId: string, speciesName: string): Promise<{ hasCapturedBefore: boolean; hasCapturedToday: boolean }> {
+  const { data, error } = await supabase
+    .from("sightings")
+    .select("created_at")
+    .eq("user_id", userId)
+    .eq("species_name", speciesName);
+
+  if (error || !data) return { hasCapturedBefore: false, hasCapturedToday: false };
+
+  const hasCapturedBefore = data.length > 0;
+  const today = new Date().toISOString().split("T")[0];
+  const hasCapturedToday = data.some((s: any) => s.created_at.startsWith(today));
+
+  return { hasCapturedBefore, hasCapturedToday };
 }
 
-export function userCapturedSpeciesToday(userId: string, speciesName: string): boolean {
-  return false;
+export async function userHasCapturedSpecies(userId: string, speciesName: string): Promise<boolean> {
+  const { hasCapturedBefore } = await checkAlreadyCaptured(userId, speciesName);
+  return hasCapturedBefore;
+}
+
+export async function userCapturedSpeciesToday(userId: string, speciesName: string): Promise<boolean> {
+  const { hasCapturedToday } = await checkAlreadyCaptured(userId, speciesName);
+  return hasCapturedToday;
 }
 
 export async function getLeaderboard(): Promise<PublicUser[]> {

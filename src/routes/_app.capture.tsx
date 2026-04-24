@@ -15,8 +15,7 @@ import { findSpecies } from "@/data/species";
 import { calculateScore } from "@/utils/scoring";
 import {
   addSighting,
-  userCapturedSpeciesToday,
-  userHasCapturedSpecies,
+  checkAlreadyCaptured,
 } from "@/services/sightings";
 import { LoadingOverlay } from "@/components/wildlife/LoadingOverlay";
 import { formatCoord } from "@/utils/formatters";
@@ -45,6 +44,12 @@ function CaptureScreen() {
   useEffect(() => {
     let cancelled = false;
     async function start() {
+      // Check if secure context
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setCameraError("Secure context (HTTPS) required for direct camera access.");
+        return;
+      }
+
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: { ideal: "environment" } },
@@ -95,21 +100,31 @@ function CaptureScreen() {
     return canvas.toDataURL("image/jpeg", 0.85);
   }
 
+  async function handleFileSelect(file: File) {
+    const reader = new FileReader();
+    reader.onload = () => {
+      processCapture(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  }
+
   async function handleCapture() {
+    if (!user || busy) return;
+    const imageUrl = cameraReady ? captureFrame() : ""; 
+    processCapture(imageUrl);
+  }
+
+  async function processCapture(imageUrl: string) {
     if (!user || busy) return;
     setBusy(true);
     setBusyMsg("Locking GPS…");
     try {
       const where = coords ?? (await getCurrentCoords());
-      const imageUrl = cameraReady
-        ? captureFrame()
-        : ""; // Will use placeholder when camera unavailable
 
       // Haptic
       if ("vibrate" in navigator) navigator.vibrate?.(40);
 
       setBusyMsg("Identifying species…");
-      // TODO: replace with real iNaturalist Vision API call
       const id = await identifySpecies(imageUrl);
 
       if (id.confidence < 0.7) {
@@ -120,13 +135,17 @@ function CaptureScreen() {
         return;
       }
 
+      setBusyMsg("Checking history...");
+      const { hasCapturedBefore, hasCapturedToday } = await checkAlreadyCaptured(user.id, id.speciesName);
+
       setBusyMsg("Checking location…");
       const { isNearZoo: nearZoo, isNearPark: nearPark } = await checkProximity(where);
 
       const cached = findSpecies(id.speciesName);
       const rarityScore = cached?.rarityScore ?? 30;
-      const isNew = !userHasCapturedSpecies(user.id, id.speciesName);
-      const isDup = userCapturedSpeciesToday(user.id, id.speciesName);
+      
+      const isNew = !hasCapturedBefore;
+      const isDup = hasCapturedToday;
 
       const breakdown = calculateScore({
         confidence: id.confidence,
@@ -182,7 +201,7 @@ function CaptureScreen() {
             className="h-full w-full object-cover"
           />
         ) : cameraError ? (
-          <CameraFallback message={cameraError} />
+          <CameraFallback message={cameraError} onFileSelect={handleFileSelect} />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-primary-foreground/70">
             <Camera className="mr-2 h-5 w-5 animate-pulse" />
@@ -238,16 +257,41 @@ function CaptureScreen() {
   );
 }
 
-function CameraFallback({ message }: { message: string }) {
+function CameraFallback({ message, onFileSelect }: { message: string; onFileSelect: (file: File) => void }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+
   return (
     <div className="flex h-full w-full flex-col items-center justify-center gap-3 px-6 text-center text-primary-foreground/80">
       <div className="flex h-16 w-16 items-center justify-center rounded-full bg-warning/20">
         <AlertCircle className="h-7 w-7 text-warning" />
       </div>
-      <p className="font-semibold">Camera unavailable</p>
-      <p className="text-sm opacity-80">{message}</p>
-      <p className="mt-2 text-xs opacity-70">
-        You can still tap the shutter to simulate a capture.
+      <p className="font-semibold text-lg">Camera Access Restricted</p>
+      <p className="text-xs opacity-70 mb-4">
+        Modern browsers require **HTTPS** for direct camera access. <br/>
+        To fix this, use an HTTPS tunnel (like ngrok) or open your device's native camera below.
+      </p>
+      
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) onFileSelect(file);
+        }}
+      />
+      
+      <button
+        onClick={() => inputRef.current?.click()}
+        className="rounded-full bg-primary-foreground px-8 py-3.5 text-sm font-bold text-foreground shadow-lg active:scale-95"
+      >
+        Open Native Camera
+      </button>
+
+      <p className="mt-6 text-[10px] opacity-40 italic">
+        (Or tap the white shutter below to use a demo image)
       </p>
     </div>
   );
